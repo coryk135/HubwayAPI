@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+.map-canvas {
+    height: 400px;
+}
+</style>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbdpUmj7uq7mo5yqWMxPK5iYzpxiZd8eA">
+
+</script>
+    <script type="text/javascript">
+function getDistance(lat1, lon1, lat2, lon2){
+  var R = 6371; // km
+  var φ1 = lat1 * Math.PI / 180;//.toRadians();
+  var φ2 = lat2 * Math.PI / 180;//.toRadians();
+  var Δφ = (lat2-lat1) * Math.PI / 180;//.toRadians();
+  var Δλ = (lon2-lon1) * Math.PI / 180;//.toRadians();
+
+  var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  var d = R * c;
+  console.log(d);
+  return d
+
+}
+function initialize(geoposition) {
+    
+    var mapOptions = {
+        center: {lat: geoposition.coords.latitude,lng: geoposition.coords.longitude},
+        zoom: 13
+    };
+    var map = new google.maps.Map(document.getElementById('map-canvas'), 
+    mapOptions);
+    var myLatlng = new google.maps.LatLng(42.3598, -71.0921);
+    var marker = new google.maps.Marker({
+                position: new google.maps.LatLng(
+                geoposition.coords.latitude, geoposition.coords.longitude
+                ),
+                map: map,
+                title: "My location",
+                icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'            
+            });
+    function reqListener(ev) {
+        var json = JSON.parse(this.response);
+        var stations = json.stations.station;
+        
+        var markers = [];
+        for (var i = 0; i < stations.length; i++) {
+            // To add the marker to the map, use the 'map' property
+            var marker = new google.maps.Marker({
+                position: new google.maps.LatLng(
+                stations[i].lat, stations[i].long
+                ),
+                map: map,
+                title: stations[i].name
+            
+            });
+            markers[stations[i].id] = marker;
+            var contentString = '<div id="content">' + 
+            '<div id="siteNotice">' + 
+            '<h3>' + stations[i].name + '</h3>' + 
+            '</div>' + 
+            '<div id="bodyContent">' + 
+            '<p>' + 
+            'Bikes: ' + stations[i].nbBikes + 
+            '</p>' + 
+            '<p>' + 
+            'Docks: ' + stations[i].nbEmptyDocks + 
+            '</p>' + 
+            '</div>' + 
+            '</div>';
+            marker.contentString = contentString;
+            if(getDistance(stations[i].lat, stations[i].long,geoposition.coords.latitude, geoposition.coords.longitude)
+                < 2){
+            var img = new Image();
+            img.onload = function() {
+            
+            
+            };
+            img.src = "http://maps.googleapis.com/maps/api/staticmap?" + 
+            "center=latsAndLngs[i].lat,latsAndLngs[i].lat" + 
+            "&zoom=13" + 
+            "&size=300x300" + 
+            "&maptype=roadmap" + 
+            "&markers=color:red%7Clabel:S%7C"+stations[i].lat+","+stations[i].long  
+            document.body.appendChild(img);
+            }
+            var infowindow = new google.maps.InfoWindow({
+                content: contentString
+            });
+            google.maps.event.addListener(marker, 'click', 
+            function() {
+                //infowindow.open(map,this);
+
+                //infowindow.setContent(this.contentString);
+                document.querySelector('#output').innerHTML = this.contentString;
+            });
+        }
+    }
+    
+    var oReq = new XMLHttpRequest();
+    oReq.onload = reqListener;
+    oReq.open("get", "http://ckinberger.hashbang.sh:8888/api", true);
+    oReq.send();
+
+
+}
+
+google.maps.event.addDomListener(window, 'load', function(){
+        navigator.geolocation.getCurrentPosition(initialize);
+    });
+</script>
+  </head>
+  <body>
+<div id="map-canvas" class="map-canvas"></div>
+<div id="output"></div>
+  </body>
+</html>
+
